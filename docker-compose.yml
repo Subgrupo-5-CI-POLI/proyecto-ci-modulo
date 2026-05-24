@@ -1,0 +1,111 @@
+# =============================================================================
+#  docker-compose.yml - Orquestación de los dos contenedores
+# =============================================================================
+#  Este archivo define la infraestructura completa del proyecto:
+#    - Dos servicios (backend y frontend)
+#    - Una red interna (red-ci) para que los contenedores se comuniquen
+#    - Política de reinicio, healthchecks y dependencias
+#
+#  Para levantar todo, basta con:   docker-compose up --build
+#  Para detener todo:               docker-compose down
+# =============================================================================
+
+# Versión de la sintaxis de Compose
+# La 3.8 es compatible con Docker 19.03+ (incluido Docker Desktop actual)
+version: '3.8'
+
+# -----------------------------------------------------------------------------
+# DEFINICIÓN DE SERVICIOS (cada servicio = un contenedor)
+# -----------------------------------------------------------------------------
+services:
+
+  # ===========================================================================
+  # SERVICIO 1: BACKEND (Node.js + Express)
+  # ===========================================================================
+  backend:
+    # Nombre amigable del contenedor (en lugar de un nombre aleatorio)
+    container_name: backend-ci
+
+    # Construir la imagen desde el Dockerfile en la carpeta ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    # Variables de entorno que recibe el contenedor
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+
+    # Política de reinicio: si el contenedor se cae, Docker lo reinicia
+    # (excepto si lo detuvimos manualmente con docker stop)
+    restart: unless-stopped
+
+    # IMPORTANTE: NO exponemos el puerto del backend al host.
+    # El backend SOLO es accesible desde dentro de la red de Docker,
+    # a través del frontend (Nginx) que actúa como proxy inverso.
+    # Esto mejora la seguridad y es buena práctica.
+    # Si quisiéramos depurar directamente, descomentaríamos:
+    # ports:
+    #   - "3000:3000"
+
+    # Conectamos este contenedor a la red interna "red-ci"
+    networks:
+      - red-ci
+
+    # Healthcheck: Docker verifica periódicamente que el contenedor esté sano.
+    # Usamos 127.0.0.1 en lugar de "localhost" porque en Alpine Linux
+    # "localhost" puede resolver a IPv6 y Node escucha en IPv4.
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ===========================================================================
+  # SERVICIO 2: FRONTEND (Nginx sirviendo HTML/CSS/JS)
+  # ===========================================================================
+  frontend:
+    container_name: frontend-ci
+
+    # Construir desde el Dockerfile en la carpeta ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    # Mapeo de puertos: el puerto 80 del contenedor se expone como 8080 del host
+    # Es decir, accedemos al frontend desde el navegador en http://localhost:8080
+    ports:
+      - "8080:80"
+
+    restart: unless-stopped
+
+    # El frontend NECESITA que el backend esté sano antes de arrancar.
+    # condition: service_healthy hace que docker-compose espere a que el
+    # healthcheck del backend devuelva "healthy" antes de levantar este servicio.
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    # Conectamos el frontend a la MISMA red que el backend.
+    # Esto es lo que permite que Nginx pueda llegar a "http://backend:3000".
+    networks:
+      - red-ci
+
+    # Healthcheck del frontend (también usa 127.0.0.1 por la misma razón)
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+# -----------------------------------------------------------------------------
+# DEFINICIÓN DE REDES
+# -----------------------------------------------------------------------------
+networks:
+  # Red bridge personalizada para los dos contenedores.
+  # En una red bridge personalizada, Docker provee DNS automático,
+  # por eso "backend" se resuelve como hostname desde el contenedor frontend.
+  red-ci:
+    driver: bridge
+    name: red-ci
