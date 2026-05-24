@@ -1,0 +1,12 @@
+# Archivos y carpetas que NO se copian al contenedor durante el build.
+# Esto reduce el tamaño del contexto de build y acelera la construcción.
+
+node_modules
+npm-debug.log
+.env
+.env.*
+.git
+.gitignore
+README.md
+Dockerfile
+.dockerignore
