@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+  =============================================================================
+   Frontend - Página de demostración
+  =============================================================================
+   Esta página se sirve desde el contenedor "frontend" usando Nginx.
+   Realiza peticiones fetch() al backend a través del proxy inverso de Nginx,
+   demostrando la comunicación entre ambos contenedores Docker.
+  =============================================================================
+-->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proyecto CI - Frontend</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Encabezado principal de la página -->
+  <header class="header">
+    <h1>🐳 Proyecto de Integración Continua</h1>
+    <p class="subtitulo">Demostración de comunicación entre dos contenedores Docker</p>
+  </header>
+
+  <!-- Contenedor principal del contenido -->
+  <main class="contenedor">
+
+    <!-- Tarjeta que muestra la arquitectura del sistema -->
+    <section class="tarjeta">
+      <h2>📐 Arquitectura</h2>
+      <pre class="diagrama">
+  ┌──────────────┐         ┌──────────────┐
+  │  Frontend    │  HTTP   │   Backend    │
+  │  Nginx       │────────▶│   Node.js    │
+  │  Puerto 80   │  /api/* │   Puerto 3000│
+  └──────────────┘         └──────────────┘
+         ▲                        
+         │ Puerto 8080            
+         │                        
+       Usuario                    
+      (Navegador)                 
+      </pre>
+    </section>
+
+    <!-- Tarjeta para el endpoint /api/saludo -->
+    <section class="tarjeta">
+      <h2>📨 Endpoint: /api/saludo</h2>
+      <button id="btnSaludo" class="boton">Llamar al backend</button>
+      <div id="resultadoSaludo" class="resultado">
+        <em>Presiona el botón para hacer una petición al backend...</em>
+      </div>
+    </section>
+
+    <!-- Tarjeta para el endpoint /api/info -->
+    <section class="tarjeta">
+      <h2>ℹ️ Endpoint: /api/info</h2>
+      <button id="btnInfo" class="boton">Obtener info del contenedor</button>
+      <div id="resultadoInfo" class="resultado">
+        <em>Presiona el botón para ver los datos del contenedor backend...</em>
+      </div>
+    </section>
+
+    <!-- Tarjeta informativa sobre cómo funciona -->
+    <section class="tarjeta tarjeta-info">
+      <h2>💡 ¿Cómo funciona?</h2>
+      <ol>
+        <li>Tu navegador pide la página al contenedor <strong>frontend</strong> (Nginx).</li>
+        <li>Al presionar un botón, JavaScript hace <code>fetch('/api/...')</code>.</li>
+        <li>Nginx recibe la petición y la <strong>reenvía internamente</strong> al contenedor <strong>backend</strong>.</li>
+        <li>El backend responde con JSON y la respuesta se muestra en pantalla.</li>
+        <li>Todo ocurre a través de una <strong>red interna de Docker</strong> llamada <code>red-ci</code>.</li>
+      </ol>
+    </section>
+
+  </main>
+
+  <!-- Pie de página -->
+  <footer class="pie">
+    <p>Proyecto académico - Módulo de Integración Continua</p>
+  </footer>
+
+  <!-- Script principal que hace las peticiones al backend -->
+  <script src="js/app.js"></script>
+
+</body>
+</html>
